@@ -9,6 +9,9 @@ import { prisma, prismaManager } from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 
+// Import middlewares
+import errorHandler from './middlewares/errorMiddleware.js';
+
 // Create Express app
 const app = express();
 
@@ -50,13 +53,8 @@ app.use(async (err, req, res, next) => {
     // Try to reconnect to the database
     try {
       await prismaManager.connect();
-      // If reconnection successful, you could retry the operation
-      // For now, just return a database error
-      return res.status(503).json({
-        status: 'error',
-        message: 'Database error occurred, please try again',
-        retryable: true
-      });
+      // If reconnection successful, pass to the standard error handler
+      return next(err);
     } catch (reconnectError) {
       // Cannot reconnect to database
       return res.status(503).json({
@@ -71,16 +69,8 @@ app.use(async (err, req, res, next) => {
   next(err);
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    status: 'error',
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+// Apply global error handler
+app.use(errorHandler);
 
 // Export app for server.js to use
 export default app;
