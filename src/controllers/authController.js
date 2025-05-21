@@ -18,11 +18,6 @@ const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     
-    // Validate required fields
-    if (!name || !email || !password) {
-      throw new ValidationError('Name, email, and password are required');
-    }
-    
     // Register the user
     const user = await register({ name, email, password });
     
@@ -48,11 +43,6 @@ const registerUser = async (req, res, next) => {
 const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    
-    // Validate required fields
-    if (!email || !password) {
-      throw new ValidationError('Email and password are required');
-    }
     
     // Authenticate the user
     const user = await login({ email, password });

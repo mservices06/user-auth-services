@@ -1,78 +1,72 @@
-import { body, validationResult } from 'express-validator';
+import { z } from 'zod';
 import { ValidationError } from '../utils/errors.js';
 
 /**
- * Process validation results
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
+ * Validate request against a Zod schema
+ * @param {Object} schema - Zod schema for validation
+ * @returns {Function} Express middleware function
  */
-export const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const errorMessages = {};
-    errors.array().forEach(error => {
-      errorMessages[error.path] = error.msg;
-    });
-    throw new ValidationError('Validation failed', errorMessages);
+export const validate = (schema) => (req, res, next) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = {};
+      error.errors.forEach((err) => {
+        errorMessages[err.path.join('.')] = err.message;
+      });
+      next(new ValidationError('Validation failed', errorMessages));
+    } else {
+      next(error);
+    }
   }
-  next();
 };
 
 /**
- * Validation rules for user registration
+ * Registration validation schema
  */
-export const registerValidation = [
-  body('name')
-    .trim()
-    .notEmpty()
-    .withMessage('Name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be between 2 and 50 characters'),
+export const registerSchema = z.object({
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters long')
+    .max(50, 'Name must be less than 50 characters')
+    .trim(),
   
-  body('email')
+  email: z.string()
+    .email('Please provide a valid email address')
     .trim()
-    .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail(),
+    .toLowerCase(),
   
-  body('password')
-    .trim()
-    .notEmpty()
-    .withMessage('Password is required')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
-    .matches(/\d/)
-    .withMessage('Password must contain at least one number')
-    .matches(/[a-zA-Z]/)
-    .withMessage('Password must contain at least one letter'),
-  
-  validate
-];
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/\d/, 'Password must contain at least one number')
+    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+});
 
 /**
- * Validation rules for user login
+ * Login validation schema
  */
-export const loginValidation = [
-  body('email')
+export const loginSchema = z.object({
+  email: z.string()
+    .email('Please provide a valid email address')
     .trim()
-    .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail(),
+    .toLowerCase(),
   
-  body('password')
-    .trim()
-    .notEmpty()
-    .withMessage('Password is required'),
-  
-  validate
-];
+  password: z.string()
+    .min(1, 'Password is required')
+});
+
+/**
+ * Middleware for validating registration request
+ */
+export const registerValidation = validate(registerSchema);
+
+/**
+ * Middleware for validating login request
+ */
+export const loginValidation = validate(loginSchema);
 
 export default {
   registerValidation,
   loginValidation
-}; 
+};
