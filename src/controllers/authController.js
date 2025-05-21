@@ -1,4 +1,4 @@
-import { register, login, getProfile } from '../services/authService.js';
+import { register, login, getProfile, refreshAccessToken, revokeRefreshToken, issueRefreshToken } from '../services/authService.js';
 import { signToken } from '../utils/jwtHelper.js';
 import { 
   ConflictError, 
@@ -24,9 +24,16 @@ const registerUser = async (req, res, next) => {
     // Generate JWT token
     const token = signToken({ userId: user.id });
     
+    // Issue a refresh token
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const refreshToken = await issueRefreshToken(user.id, userAgent, ipAddress);
+    
     // Return token and user data
     res.status(201).json({
-      token,
+      accessToken: token,
+      refreshToken: refreshToken.token,
+      expiresAt: refreshToken.expiresAt,
       user
     });
   } catch (error) {
@@ -50,9 +57,16 @@ const loginUser = async (req, res, next) => {
     // Generate JWT token
     const token = signToken({ userId: user.id });
     
+    // Issue a refresh token
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const refreshToken = await issueRefreshToken(user.id, userAgent, ipAddress);
+    
     // Return token and user data
     res.json({
-      token,
+      accessToken: token,
+      refreshToken: refreshToken.token,
+      expiresAt: refreshToken.expiresAt,
       user
     });
   } catch (error) {
@@ -82,4 +96,59 @@ const getUserProfile = async (req, res, next) => {
   }
 };
 
-export { registerUser, loginUser, getUserProfile };
+/**
+ * Refresh access token using a refresh token
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken: token } = req.body;
+    
+    if (!token) {
+      throw new ValidationError('Refresh token is required');
+    }
+    
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    
+    // Refresh the access token
+    const tokens = await refreshAccessToken(token, userAgent, ipAddress);
+    
+    // Return the new tokens
+    res.json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken.token,
+      expiresAt: tokens.refreshToken.expiresAt
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Logout user and revoke refresh token
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const logout = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      throw new ValidationError('Refresh token is required');
+    }
+    
+    // Revoke the refresh token
+    await revokeRefreshToken(refreshToken);
+    
+    // Return success with no content
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { registerUser, loginUser, getUserProfile, refreshToken, logout };

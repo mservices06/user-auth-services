@@ -1,7 +1,12 @@
 import express from 'express';
-import { registerUser, loginUser, getUserProfile } from '../controllers/authController.js';
+import { registerUser, loginUser, getUserProfile, refreshToken, logout } from '../controllers/authController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
-import { registerValidation, loginValidation } from '../middlewares/validationMiddleware.js';
+import { 
+  registerValidation, 
+  loginValidation, 
+  refreshTokenValidation, 
+  logoutValidation 
+} from '../middlewares/validationMiddleware.js';
 
 const router = express.Router();
 
@@ -25,5 +30,19 @@ router.post('/login', loginValidation, loginUser);
  * @access  Private
  */
 router.get('/me', authenticate, getUserProfile);
+
+/**
+ * @route   POST /api/auth/refresh-token
+ * @desc    Refresh access token using refresh token
+ * @access  Public
+ */
+router.post('/refresh-token', refreshTokenValidation, refreshToken);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user and revoke refresh token
+ * @access  Private
+ */
+router.post('/logout', authenticate, logoutValidation, logout);
 
 export default router;

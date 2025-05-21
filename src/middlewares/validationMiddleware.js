@@ -57,6 +57,22 @@ export const loginSchema = z.object({
 });
 
 /**
+ * Refresh token validation schema
+ */
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string()
+    .min(1, 'Refresh token is required')
+});
+
+/**
+ * Logout validation schema
+ */
+export const logoutSchema = z.object({
+  refreshToken: z.string()
+    .min(1, 'Refresh token is required')
+});
+
+/**
  * Middleware for validating registration request
  */
 export const registerValidation = validate(registerSchema);
@@ -66,7 +82,19 @@ export const registerValidation = validate(registerSchema);
  */
 export const loginValidation = validate(loginSchema);
 
+/**
+ * Middleware for validating refresh token request
+ */
+export const refreshTokenValidation = validate(refreshTokenSchema);
+
+/**
+ * Middleware for validating logout request
+ */
+export const logoutValidation = validate(logoutSchema);
+
 export default {
   registerValidation,
-  loginValidation
+  loginValidation,
+  refreshTokenValidation,
+  logoutValidation
 };
