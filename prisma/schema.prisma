@@ -6,3 +6,68 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Enum definitions
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum TokenType {
+  VERIFICATION
+  RESET
+}
+
+model User {
+  id                       String       @id @default(uuid())
+  name                     String
+  email                    String       @unique
+  emailVerified            Boolean      @default(false)
+
+  // Email verification
+  verificationToken        String?
+  verificationTokenType    TokenType?
+  verificationTokenExpires DateTime?
+
+  // Password storage & change tracking
+  passwordHash             String
+  passwordChangedAt        DateTime?
+
+  // Password reset
+  resetToken               String?
+  resetTokenType           TokenType?
+  resetTokenExpires        DateTime?
+
+  // Roles & status
+  roles                    Role[]       @default([USER])
+  isActive                 Boolean      @default(true)
+
+  // Security controls
+  failedLoginAttempts      Int          @default(0)
+  lockUntil                DateTime?
+
+  // Two-factor authentication (TOTP)
+  twoFactorEnabled         Boolean      @default(false)
+  twoFactorSecret          String?
+
+  // Audit
+  lastLoginAt              DateTime?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  // Relation to refresh tokens
+  RefreshTokens            RefreshToken[]
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  userAgent   String?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+}
