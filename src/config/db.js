@@ -31,11 +31,11 @@ class PrismaManager {
       await this.prisma.$connect();
       this.isConnected = true;
       this.connectionAttempts = 0;
-      console.log('Database connection established successfully');
+      console.log('✅ Database connection established successfully');
       return this.prisma;
     } catch (error) {
       this.connectionAttempts++;
-      console.error(`Database connection failed (attempt ${this.connectionAttempts}):`, error.message);
+      console.error(`🔴 Database connection failed (attempt ${this.connectionAttempts}):`, error.message);
       
       if (this.connectionAttempts < this.maxRetries) {
         console.log(`Retrying connection in ${this.retryDelay / 1000} seconds...`);
@@ -43,7 +43,7 @@ class PrismaManager {
         await new Promise(resolve => setTimeout(resolve, this.retryDelay));
         return this.connect(); // Retry recursively
       } else {
-        console.error('Maximum connection retry attempts reached');
+        console.error('🔴 Maximum connection retry attempts reached');
         throw new Error(`Failed to connect to database after ${this.maxRetries} attempts: ${error.message}`);
       }
     }
@@ -54,9 +54,9 @@ class PrismaManager {
       try {
         await this.prisma.$disconnect();
         this.isConnected = false;
-        console.log('Database connection closed successfully');
+        console.log('✅ Database connection closed successfully');
       } catch (error) {
-        console.error('Error while disconnecting from database:', error.message);
+        console.error('🔴 Error while disconnecting from database:', error.message);
       }
     }
   }
@@ -67,7 +67,7 @@ const prismaManager = new PrismaManager();
 
 // Initialize connection immediately
 const prismaClient = await prismaManager.connect().catch(error => {
-  console.error('Initial database connection failed:', error.message);
+  console.error('🔴 Initial database connection failed:', error.message);
   // Return a PrismaClient instance that will retry on operations
   return prismaManager.prisma || new PrismaClient();
 });

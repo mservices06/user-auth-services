@@ -73,6 +73,39 @@ export const logoutSchema = z.object({
 });
 
 /**
+ * Resend verification validation schema
+ */
+export const resendVerificationSchema = z.object({
+  email: z.string()
+    .email('Please provide a valid email address')
+    .trim()
+    .toLowerCase()
+});
+
+/**
+ * Forgot password validation schema
+ */
+export const forgotPasswordSchema = z.object({
+  email: z.string()
+    .email('Please provide a valid email address')
+    .trim()
+    .toLowerCase()
+});
+
+/**
+ * Reset password validation schema
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string()
+    .min(1, 'Reset token is required'),
+  
+  newPassword: z.string()
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/\d/, 'Password must contain at least one number')
+    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+});
+
+/**
  * Middleware for validating registration request
  */
 export const registerValidation = validate(registerSchema);
@@ -92,9 +125,27 @@ export const refreshTokenValidation = validate(refreshTokenSchema);
  */
 export const logoutValidation = validate(logoutSchema);
 
+/**
+ * Middleware for validating resend verification request
+ */
+export const resendVerificationValidation = validate(resendVerificationSchema);
+
+/**
+ * Middleware for validating forgot password request
+ */
+export const forgotPasswordValidation = validate(forgotPasswordSchema);
+
+/**
+ * Middleware for validating reset password request
+ */
+export const resetPasswordValidation = validate(resetPasswordSchema);
+
 export default {
   registerValidation,
   loginValidation,
   refreshTokenValidation,
-  logoutValidation
+  logoutValidation,
+  resendVerificationValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation
 };

@@ -1,4 +1,4 @@
-import { register, login, getProfile, refreshAccessToken, revokeRefreshToken, issueRefreshToken } from '../services/authService.js';
+import { register, login, getProfile, refreshAccessToken, revokeRefreshToken, issueRefreshToken, resendVerification, verifyEmail, forgotPassword, resetPassword } from '../services/authService.js';
 import { signToken } from '../utils/jwtHelper.js';
 import { 
   ConflictError, 
@@ -151,4 +151,113 @@ const logout = async (req, res, next) => {
   }
 };
 
-export { registerUser, loginUser, getUserProfile, refreshToken, logout };
+/**
+ * Resend verification email
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    await resendVerification(email);
+    
+    // Return success with no content
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify email with token
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const verifyUserEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      throw new ValidationError('Verification token is required');
+    }
+    
+    const user = await verifyEmail(token);
+    
+    res.json({
+      message: 'Email verification successful',
+      user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Initiate forgot password process
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const forgotUserPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    await forgotPassword(email);
+    
+    // Return success with no content
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reset password with token
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const resetUserPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      throw new ValidationError('Token and new password are required');
+    }
+    
+    const user = await resetPassword(token, newPassword);
+    
+    // Generate JWT token
+    const accessToken = signToken({ userId: user.id });
+    
+    // Issue a refresh token
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const refreshToken = await issueRefreshToken(user.id, userAgent, ipAddress);
+    
+    res.json({
+      message: 'Password reset successful',
+      accessToken,
+      refreshToken: refreshToken.token,
+      expiresAt: refreshToken.expiresAt,
+      user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { 
+  registerUser, 
+  loginUser, 
+  getUserProfile, 
+  refreshToken, 
+  logout,
+  resendVerificationEmail,
+  verifyUserEmail,
+  forgotUserPassword,
+  resetUserPassword
+};
